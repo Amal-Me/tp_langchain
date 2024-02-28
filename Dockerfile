@@ -9,3 +9,4 @@ COPY app.py /app/app.py
 COPY .env /app/.env
 
 CMD ["python", "app.py"]
+#add com
