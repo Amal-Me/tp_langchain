@@ -6,29 +6,19 @@ import sys
 # ! we verify that the environment variables are loaded
 # print(os.getenv('OPENAI_API_KEY'))
 
+from duckduckgo_search import DDGS
 from langchain_openai import ChatOpenAI
 # this import allows us to format prompts with variables
 from langchain.prompts import PromptTemplate
 
+from prompts import (
+    answer_to_question_with_text_prompt_template,
+    control_prompt_template,
+    formatting_prompt_template
+)
+
 # we create an instance of Chat-GPT programmatically
 chat_gpt = ChatOpenAI()
-control_prompt_template = """Do you have the answer to the question below, delimited by dashes, in your knowledge base? 
------------------------------------
-{question}
------------------------------------
-If the answer is yes, give us your source."""
-
-formatting_prompt_template = """You are a bot that always outputs True or False.
-You are given a question in natural language, delimited by dashes below.
------------------------------------
-{question}
------------------------------------
-You are also given an answer in natural language, delimited by dashes below.
------------------------------------
-{answer}
------------------------------------
-You must output False if the answer says something like "I don't know the answer".
-Only output the boolean, nothing else."""
 
 # we get the question from the command line
 question = sys.argv[1]
@@ -46,6 +36,14 @@ formatting_response = chat_gpt.invoke(formatting_prompt.format(
 ))
 
 if (formatting_response.content == "True"):
+    # we display the raw bot answer
     print(knowledge_base_answer)
 else:
-    print("TODO make a web search to find the answer to the question.")
+    # when the bot does not know the answer, we trigger a web search with DuckDuckGo
+    with DDGS() as ddgs:
+        results = [r for r in ddgs.text(question, safesearch='moderate', timelimit='y', max_results=8)]
+        # we get all the `title` and the `body` of the results into a single text
+        body_title_aggregate = "\n\n".join([f"\n---{r['title']}\n{r['body']}\n---" for r in results])
+        print(body_title_aggregate)
+
+# TODO display all the results in a web page or another nice format
